@@ -1,0 +1,135 @@
+\documentclass[12pt, letterpaper]{article}
+% Just for better margins
+\usepackage[margin=1.0in, includehead, bmargin=1.166667in, headsep=0pt]{geometry}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{graphicx} % Required for inserting images
+
+\usepackage{biblatex}
+
+\addbibresource{bibliography.bib}
+
+\setlength\parskip{0.75em}
+\setlength\parindent{0em}
+
+\title{Quaternions and Animation}
+\author{Dashiell Elliott, Luke Harper, Robin Husman, Will Sakalauskas}
+\date{December 2024}
+
+\renewcommand{\i}{\mathbf{i}}
+\renewcommand{\j}{\mathbf{j}}
+\renewcommand{\k}{\mathbf{k}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\bbR}{\mathbb{R}}
+\newcommand{\bbZ}{\mathbb{Z}}
+\DeclareMathOperator\GL{GL}
+\DeclareMathOperator\SL{SL}
+\DeclareMathOperator\SO{SO}
+\renewcommand{\H}{\mathbb{H}}
+\newcommand{\bbH}{\mathbb{H}}
+\renewcommand{\b}[1]{\mathbf{#1}}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+How can we measure and perform calculations with rotations of 3-dimensional space?
+It's not hard to imagine that we would want to use a computer to rotate points
+in a CAD program or for some animation software or a video game.
+In 2-dimensions, we have essentially 3 options: \begin{enumerate}
+    \item Rotations can be stored as an angle in $[0,2\pi)$,
+        which can be treated as representatives for the factor group $\bbR/2\pi\bbZ$.
+    \item Since rotations are linear transformations,
+        they can be stored as $2\times2$ matrices of real numbers,
+        more specifically in the group of orthogonal determinant $1$ matrices,
+        $\SO(2) \le \SL_2(\bbR) \le \GL_2(\bbR)$.
+    \item Multiplication by complex numbers of magnitude $1$ rotates the complex plane,
+        so we can store the rotations as complex numbers.
+\end{enumerate}
+These methods have different advantages in different contexts.
+Angles are easy to read but require some trigonometry to actually apply,
+while matrices and complex numbers are both harder to interpret but
+generally more friendly to work with computationally and theoretically.
+Similarly, we have options when it comes to representing 3-dimensional rotations. \begin{enumerate}
+    \item We can extend the angle technique to 3 dimensions by storing rotations
+        as yaw, pitch, and roll, making angle triplets called ``Euler angles''.
+    \item We can also deal with matrices by just adding a dimension and using the
+        $3\times3$ matrices of $\SO(3)$.
+    \item A complex number with more dimensions is\ldots\ what exactly?
+\end{enumerate}
+This is the idea behind quaternions, and it's what we'll be explaining in the rest of this report.
+Euler angles are very inconvenient for computation and while matrices are a significant upgrade,
+they still require storing $9$ numbers and turn out not to be nearly as nice as quaternions
+in some ways.
+
+\section{Motivation}
+Since the complex numbers allow us a way to represent rotations in 2 dimensions, it is sensible to look for a 3 dimensional variant that will represent rotations in 3 dimensions. Unfortunately, no such algebra exists \cite{frobenius1877}.
+
+\section{Group Theory of the Quaternions}
+Generally, quaternions are a ring -- which is a set equipped with both an addition and a multiplication -- denoted $\H$. Here we will focus mainly on the  quaternions as a group under the operation of quaternion multiplication (however we will still call the group $\H$).
+
+One important subgroup of $\H$ is $Q_8 = \{1, i, j, k, -1, -i, -j, -k\}$, the set of the basis quaternions in each axis. It has six subgroups:
+\begin{enumerate}
+    \item $\{1\}$
+    \item $\{1,-1\} = \langle -1 \rangle$
+    \item $\{1, -1, i, -i\} = \langle i \rangle$
+    \item $\{1, -1, j, -j\} = \langle j \rangle$
+    \item $\{1, -1, k, -k\} = \langle k \rangle$
+    \item $Q_8$
+\end{enumerate}
+
+The center is $Z(Q_8) = \{1, -1\} = \langle 1 \rangle$ and $Q_8 / Z(Q_8) \approx \mathbb{Z}_2 \oplus \mathbb{Z}_2$
+
+The group $Q_8$ is Hamiltonian, that is, it is not abelian, but every subgroup is normal.
+
+Another subgroup is the set of unit quaternions, which we will call $V$. That is, $V=\{a+b\i+c\j+d\k: a,b,c,d \in \R \text{ with }a^2+b^2+c^2+d^2=1\}$. We claim that $V$ is a subgroup of $\H^*$. Clearly, the identity element $1$ is in $V$ since $1^2+0^2+0^2+0^2=1$. So, $V$ is nonempty. We omit the (vastly many lines of) algebra to verify that the product of two unit quaternions is a unit quaternion, and that rational powers of unit quaternions are unit quaternions.
+
+%[Something about the inverses? Idk]
+
+% Something about representation as cos theta + u sin theta
+% Note that conjugate is cos theta - u sin theta
+% Note that square root is cos theta/2 + u sin theta/2
+
+\section{Interpretation of Unit Quaternions as Rotation Around an Axis}
+
+By Euler, summarized in \cite{kuipers}, ``Any two independent orthonormal coordinate frames may be related by a
+single rotation about some axis.''
+
+Let us see if we can discover how this idea relates to unit quaternions!
+
+By \cite{stackex-polar}, for any unit quaternion $q$, we can choose a real number $\theta$ and a pure unit quaternion $\b{u}$ such that $q=\cos \theta + \b{u} \sin \theta$.
+
+Observe that $\b{u}^2=(a\i+b\j+c\k)(a\i+b\j+c\k)=(-a^2-b^2-c^2+ab\i\j+ab\j\i + ac\i\k+ac\k\i+bc\j\k+bc\k\j)=-1$.
+
+So, for any real $\alpha$,
+\begin{align*}
+    q (\alpha \b{u})q^* &= (\cos \theta + \b{u} \sin \theta)(\alpha \b{u})(\cos \theta - \b{u} \sin \theta) \\
+    &= (\cos \theta + \b{u} \sin \theta)(\alpha \b{u} \cos \theta - \alpha \b{u} \b{u} \sin \theta) \\
+    &= \alpha (\cos \theta + \b{u} \sin \theta)( \b{u} \cos \theta + \sin \theta) \\
+    &= \alpha (\b{u} \cos^2 \theta + \cos\theta \sin \theta + \b{u} \b{u} \sin \theta \cos \theta + \b{u} \sin^2 \theta) \\
+    &= \alpha(\b{u}(\cos^2 \theta + \sin^2 \theta) + 0) \\
+    &= \alpha \b{u}
+\end{align*}
+
+That is, the rotation represented by $q$ takes any point in the line in $\R^3$ spanned by $\b{u}$ to itself. Since no assumptions about $q$ other than magnitude were made, this must mean the pure unit quaternion $\b{u}$ is in the direction of the axis about which the rotation is made.
+
+It is perhaps a reasonable assumption by our notation that $\theta$ may represent the angle by which $q$ rotates vectors; This assumption is correct up to a factor of one half \cite{hanson}, though the proof is omitted here for brevity.
+
+\section{Advantages of Unit Quaternions as Rotations (Over Euler Angles)}
+
+\subsection{Interpolation}
+
+Intuitively, there is a very easy way to apply half of a rotation represented as a quaternion. Let $f$ be a rotation. For some $q\in V$, we can write $f$ as $f(p)=qpq^*$ for all pure quaternions $p$. That is, $f$ is the rotation represented by $q$. Then, consider the representation represented by $q^{1/2}$. We will call this rotation $g$, defined by $g(p)=q^{1/2}p(q^{1/2})^*$. This is the functional square root of $f$; $f(p)=qpq^*=q^{1/2}q^{1/2}p(q^{1/2})^*(q^{1/2})^*=g(g(p))$. So, in some sense, $g$ is half of the rotation of $f$.
+
+Let us choose pure unit quaternion $u$ and real angle $\theta$ such that $q=\cos \theta + \b{u} \sin \theta$. Then $q^{1/2}=\cos \frac{\theta}{2} + \b{u} \sin \frac{\theta}{2}$.
+
+This technique applies more generally for any interpolation time coordinate $t \in [0,1]$ --- applying $q^t=\cos{t\theta} + \b{u} \sin{t\theta}$ --- in what \cite{hanson} calls SLERP.
+
+\section{}
+
+\medskip
+
+\printbibliography
+
+\end{document}
